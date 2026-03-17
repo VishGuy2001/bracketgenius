@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "name": "bracketgenius",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "backend/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ],
+  "env": {
+    "GEMINI_API_KEY":        "@gemini_api_key",
+    "VITE_SUPABASE_URL":     "@supabase_url",
+    "VITE_SUPABASE_ANON_KEY":"@supabase_anon_key",
+    "FRONTEND_URL":          "https://bracketgenius.vercel.app"
+  }
+}

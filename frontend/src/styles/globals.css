@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  
+  body {
+    background-color: #07080A;
+    color: #F0F2FF;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0D0F14; }
+  ::-webkit-scrollbar-thumb { background: #252A3A; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3A4060; }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(26, 30, 43, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px;
+  }
+
+  .gold-border {
+    border: 1px solid rgba(240, 180, 41, 0.3);
+  }
+
+  .btn-primary {
+    @apply bg-genius-gold text-genius-black font-heading font-semibold px-6 py-3 rounded-xl
+           hover:bg-genius-gold-light transition-all duration-200 
+           shadow-gold hover:shadow-[0_0_40px_rgba(240,180,41,0.6)]
+           active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border border-genius-border text-genius-white font-heading px-6 py-3 
+           rounded-xl hover:border-genius-gold hover:text-genius-gold transition-all duration-200
+           active:scale-95;
+  }
+
+  .stat-pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono
+           bg-genius-card border border-genius-border;
+  }
+
+  .bracket-line {
+    stroke: rgba(240, 180, 41, 0.4);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: bracketDraw 1.5s ease-out forwards;
+  }
+
+  .shimmer-text {
+    background: linear-gradient(90deg, #F0B429 0%, #FF6B2B 25%, #8B5CF6 50%, #FF6B2B 75%, #F0B429 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+  }
+
+  .court-bg {
+    background-image: 
+      linear-gradient(rgba(61,127,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(61,127,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .win-bar {
+    @apply h-2 rounded-full bg-genius-gold transition-all duration-700 ease-out;
+  }
+
+  .team-card {
+    @apply glass-card p-4 cursor-pointer transition-all duration-200
+           hover:border-genius-gold/40 hover:shadow-gold hover:-translate-y-0.5
+           active:scale-[0.98];
+  }
+
+  .confidence-high   { @apply text-genius-teal; }
+  .confidence-medium { @apply text-genius-gold; }
+  .confidence-low    { @apply text-genius-orange; }
+}
+
+/* Animated gradient orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* Bracket connector lines */
+.bracket-connector {
+  position: absolute;
+  border-color: rgba(240, 180, 41, 0.2);
+}
+
+/* Loading skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(37, 42, 58, 0.5) 25%,
+    rgba(58, 64, 96, 0.5) 50%,
+    rgba(37, 42, 58, 0.5) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Tour spotlight */
+.tour-spotlight {
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.75), 0 0 0 2px rgba(240,180,41,0.6);
+  border-radius: 12px;
+  position: relative;
+  z-index: 1000;
+}
+
+/* Win probability gradient bar */
+.prob-bar {
+  background: linear-gradient(90deg, #3D7FFF, #00D4AA, #F0B429, #FF6B2B);
+  border-radius: 4px;
+  height: 6px;
+}

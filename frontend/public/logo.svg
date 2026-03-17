@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <linearGradient id="ballGrad" x1="80" y1="80" x2="320" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF8C42"/>
+      <stop offset="50%" stop-color="#FF6B2B"/>
+      <stop offset="100%" stop-color="#CC4A10"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="120" y1="100" x2="220" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="400" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F0B429"/>
+      <stop offset="50%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#F0B429"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="ballClip">
+      <circle cx="200" cy="185" r="130"/>
+    </clipPath>
+  </defs>
+
+  <!-- Drop shadow circle -->
+  <ellipse cx="200" cy="340" rx="110" ry="18" fill="#000000" opacity="0.3"/>
+
+  <!-- Basketball body -->
+  <circle cx="200" cy="185" r="130" fill="url(#ballGrad)" filter="url(#shadow)"/>
+
+  <!-- Basketball seam lines (clipped to ball) -->
+  <g clip-path="url(#ballClip)" stroke="#1A0A00" stroke-width="4" stroke-opacity="0.55" fill="none">
+    <!-- Vertical center seam -->
+    <path d="M200 55 C230 90 230 280 200 315"/>
+    <path d="M200 55 C170 90 170 280 200 315"/>
+    <!-- Horizontal center seam -->
+    <path d="M70 185 C110 155 290 155 330 185"/>
+    <path d="M70 185 C110 215 290 215 330 185"/>
+  </g>
+
+  <!-- Shine overlay -->
+  <circle cx="200" cy="185" r="130" fill="url(#shineGrad)"/>
+
+  <!-- Bracket symbols on either side of ball -->
+  <!-- Left bracket -->
+  <g filter="url(#glow)">
+    <path d="M42 130 L28 130 L28 240 L42 240"
+      stroke="url(#goldGrad)" stroke-width="7" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Right bracket -->
+  <g filter="url(#glow)">
+    <path d="M358 130 L372 130 L372 240 L358 240"
+      stroke="url(#goldGrad)" stroke-width="7" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Text: BRACKET -->
+  <text
+    x="200" y="362"
+    font-family="'Arial Black', 'Impact', sans-serif"
+    font-size="42"
+    font-weight="900"
+    text-anchor="middle"
+    letter-spacing="6"
+    fill="url(#goldGrad)">BRACKET</text>
+
+  <!-- Text: GENIUS (smaller, below) -->
+  <text
+    x="200" y="392"
+    font-family="'Arial Black', 'Impact', sans-serif"
+    font-size="26"
+    font-weight="700"
+    text-anchor="middle"
+    letter-spacing="10"
+    fill="#FFFFFF"
+    opacity="0.75">GENIUS</text>
+
+</svg>
