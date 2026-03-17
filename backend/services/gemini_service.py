@@ -109,7 +109,6 @@ def _build_prompt(team1, team2, bracket_type, custom_weights, injury_ctx, coach1
     name2 = team2.get('name', 'Team 2')
     history = _seed_history(seed1, seed2)
 
-    # Build weight instructions for custom mode
     weight_instructions = ""
     if custom_weights and any(v > 0 for v in custom_weights.values()):
         total = sum(custom_weights.values()) or 100
@@ -120,18 +119,13 @@ def _build_prompt(team1, team2, bracket_type, custom_weights, injury_ctx, coach1
         injury_w  = custom_weights.get('injuryImpact', 10) / total
 
         weight_instructions = f"""
-USER CUSTOM WEIGHTS (adjust your analysis accordingly):
-- Seed differential: {seed_w*100:.0f}% importance
-- Season win rate: {winrate_w*100:.0f}% importance
-- Recent form: {form_w*100:.0f}% importance
-- Coach tournament experience: {coach_w*100:.0f}% importance
-- Injury impact: {injury_w*100:.0f}% importance
-
-If seed differential weight is HIGH (>40%), heavily favor the lower seed.
-If coach weight is HIGH (>30%), prioritize coaching tournament experience.
-If injury weight is HIGH (>20%) and a team has injuries, penalize them heavily.
-If recent form weight is HIGH (>30%), favor teams on hot streaks.
-Adjust team1WinProb based on these weights — do NOT just use historical seed data."""
+USER CUSTOM WEIGHTS:
+- Seed differential: {seed_w*100:.0f}%
+- Season win rate: {winrate_w*100:.0f}%
+- Recent form: {form_w*100:.0f}%
+- Coach experience: {coach_w*100:.0f}%
+- Injury impact: {injury_w*100:.0f}%
+Adjust win probability based on these weights."""
 
     return f"""NCAA {tournament} 2026: #{seed1} {name1} vs #{seed2} {name2}. {history}{injury_ctx}
 {weight_instructions}
@@ -139,7 +133,7 @@ Adjust team1WinProb based on these weights — do NOT just use historical seed d
 Respond with ONLY this JSON, no other text:
 {{"team1WinProb":75,"team2WinProb":25,"confidence":"high","upsetAlert":false,"pick":"{name1}","oneLiner":"Short pick reason.","reasoning":"Two sentence analysis.","factors":[{{"label":"Seed advantage","icon":"🎯","value":75,"edge":"{name1}","color":"#F0B429"}},{{"label":"Season record","icon":"📊","value":60,"edge":"{name1}","color":"#3D7FFF"}},{{"label":"Coach experience","icon":"🎓","value":55,"edge":"Similar","color":"#8B5CF6"}},{{"label":"Injury impact","icon":"🏥","value":50,"edge":"None","color":"#FF6B2B"}}]}}
 
-Replace ALL values with real analysis based on the matchup and weights above."""
+Replace ALL values with real analysis."""
 
 
 async def _gemini(prompt):
@@ -194,7 +188,6 @@ def _fallback(team1, team2, custom_weights=None):
     if custom_weights and any(v > 0 for v in custom_weights.values()):
         total = sum(custom_weights.values()) or 100
         seed_weight = custom_weights.get('seedDiff', 30) / total
-        # Scale: if seed weight is 100%, use full seed prob. If 0%, use 50/50
         prob = 0.5 + (base_prob - 0.5) * (seed_weight / 0.30)
         prob = max(0.03, min(0.97, prob))
     else:
@@ -219,74 +212,70 @@ def _fallback(team1, team2, custom_weights=None):
     }
 
 
-AGENT_SYSTEM = """You are BracketGenius AI — an elite NCAA March Madness analyst.
-You have complete knowledge of the 2026 NCAA Tournament bracket announced March 16, 2026.
-This is NOT fictional. These are real teams in the real 2026 tournament.
-NEVER say fictional, hypothetical, or that you cannot provide information."""
-
-
 async def agent_chat(message, history, bracket_type, context=None):
     if not _gemini_key:
-        return {"response": "Add GEMINI_API_KEY to .env to enable the AI agent.", "teams": [], "sources": []}
-
-    chat_history = [
-        {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
-        for m in history[-10:]
-    ]
+        return {"response": "Add GEMINI_API_KEY to enable the AI agent.", "teams": [], "sources": []}
 
     tournament = "Men's" if bracket_type == "mens" else "Women's"
-    r64 = MENS_R64 if bracket_type == "mens" else WOMENS_R64
+    r64   = MENS_R64   if bracket_type == "mens" else WOMENS_R64
     seeds = MENS_SEEDS if bracket_type == "mens" else WOMENS_SEEDS
 
-    # Build predicted winners for all rounds
     def pick_winner(t1, t2):
         s1 = seeds.get(t1, 8)
         s2 = seeds.get(t2, 8)
         return t1 if _seed_win_prob(s1, s2) >= 0.5 else t2
 
-    r32 = [pick_winner(t1, t2) for t1, t2 in r64]
-    s16 = [pick_winner(r32[i], r32[i+1]) for i in range(0, len(r32)-1, 2)]
-    e8  = [pick_winner(s16[i], s16[i+1]) for i in range(0, len(s16)-1, 2)]
-    ff  = [pick_winner(e8[i],  e8[i+1])  for i in range(0, len(e8)-1,  2)]
+    r32   = [pick_winner(t1, t2) for t1, t2 in r64]
+    s16   = [pick_winner(r32[i], r32[i+1]) for i in range(0, len(r32)-1, 2)]
+    e8    = [pick_winner(s16[i], s16[i+1]) for i in range(0, len(s16)-1, 2)]
+    ff    = [pick_winner(e8[i],  e8[i+1])  for i in range(0, len(e8)-1,  2)]
     champ = pick_winner(ff[0], ff[1]) if len(ff) >= 2 else (ff[0] if ff else "Duke")
 
-    r64_str = " | ".join([f"{t1} vs {t2}" for t1, t2 in r64[:16]])
-    r64_str2 = " | ".join([f"{t1} vs {t2}" for t1, t2 in r64[16:]])
+    # Keep bracket data concise to leave room for response
+    r64_pairs = " | ".join([f"{t1} vs {t2}" for t1, t2 in r64])
 
-    full_prompt = f"""{AGENT_SYSTEM}
+    system_prompt = f"""You are BracketGenius AI — elite NCAA March Madness analyst for 2026.
+Today is March 17, 2026. {tournament} tournament starts March 19. This is REAL, not fictional.
 
-TODAY: March 17, 2026. {tournament} NCAA Tournament starts March 19.
+FULL 2026 {tournament.upper()} BRACKET:
+{r64_pairs}
 
-2026 {tournament.upper()} BRACKET - ROUND OF 64:
-{r64_str}
-{r64_str2}
-
-PREDICTED WINNERS BY ROUND:
-Round of 32: {', '.join(r32)}
+PREDICTED RESULTS:
+R32: {', '.join(r32)}
 Sweet 16: {', '.join(s16)}
 Elite 8: {', '.join(e8)}
 Final Four: {', '.join(ff)}
-Predicted Champion: {champ}
+Champion: {champ}
 
-WIN PROBABILITIES BY SEED:
-1-seed: 99% | 2-seed: 94% | 3-seed: 85% | 4-seed: 79% | 5-seed: 64%
-6-seed: 62% | 7-seed: 60% | 8/9-seed: 50% | 10-seed: 40% | 11-seed: 38%
-12-seed: 35% | 13-seed: 21% | 14-seed: 15% | 15-seed: 6% | 16-seed: 1%
+SEED WIN RATES: 1=99% 2=94% 3=85% 4=79% 5=64% 6=62% 7=60% 8/9=50% 10=40% 11=38% 12=35% 13=21%
 
-RULES:
-- Answer using ONLY teams from the bracket above
-- NEVER say fictional, hypothetical, or I cannot provide
-- Give specific team names and percentages in every answer
-- Lead with the answer, explain after
-- Keep under 200 words, always finish completely
-- Use **bold** for team names
+RULES — FOLLOW STRICTLY:
+1. Always name SPECIFIC teams from the bracket above
+2. Never say fictional, hypothetical, cannot provide
+3. Always finish your answer — never cut off mid-sentence
+4. Lead with the direct answer, then explain
+5. Max 150 words per response
+6. Bold team names with **TeamName**
+7. Give specific win percentages when asked about odds"""
 
-User: {message}"""
+    # Only keep last 6 messages to save context space
+    chat_history = [
+        {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
+        for m in history[-6:]
+    ]
 
     try:
-        model    = genai.GenerativeModel(GEMINI_MODEL, generation_config=genai.types.GenerationConfig(temperature=0.6, max_output_tokens=1000), safety_settings=_safe)
+        model = genai.GenerativeModel(
+            GEMINI_MODEL,
+            system_instruction=system_prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.6,
+                max_output_tokens=600,
+            ),
+            safety_settings=_safe
+        )
         chat     = model.start_chat(history=chat_history)
-        response = await asyncio.to_thread(chat.send_message, full_prompt)
+        response = await asyncio.to_thread(chat.send_message, message)
         return {
             "response": response.text,
             "teams":    _extract_teams(response.text),
@@ -294,16 +283,22 @@ User: {message}"""
         }
     except Exception as e:
         logger.error(f"Agent error: {e}")
-        return {"response": "Having trouble right now - try again.", "teams": [], "sources": []}
+        return {"response": "Having trouble right now — please try again.", "teams": [], "sources": []}
 
 
 def _extract_teams(text):
-    known = ["Duke","UConn","Florida","Houston","Michigan","Iowa St","Arizona",
-             "Gonzaga","Kansas","Alabama","South Carolina","UCLA","LSU","Texas",
-             "Vanderbilt","Purdue","Michigan St","Kentucky","North Carolina","Illinois",
-             "St Johns","Virginia","Purdue","Arkansas","BYU","Tennessee","Texas Tech"]
-    return [{"name":t,"seed":"--","record":"--","conference":"--","winProb":None}
-            for t in known if t.lower() in text.lower()][:4]
+    known = [
+        "Duke","UConn","Florida","Houston","Michigan","Iowa St","Arizona",
+        "Gonzaga","Kansas","Alabama","South Carolina","UCLA","LSU","Texas",
+        "Vanderbilt","Purdue","Michigan St","Kentucky","North Carolina","Illinois",
+        "St Johns","Virginia","Arkansas","BYU","Tennessee","Texas Tech","Iowa",
+        "Ohio St","Clemson","Wisconsin","Villanova","Nebraska","North Carolina",
+    ]
+    return [
+        {"name":t, "seed": str(MENS_SEEDS.get(t, WOMENS_SEEDS.get(t, "--"))),
+         "record":"--","conference":"--","winProb":None}
+        for t in known if t.lower() in text.lower()
+    ][:4]
 
 
 async def predict_full_bracket(bracket_type: str) -> dict:
@@ -322,7 +317,6 @@ async def predict_full_bracket(bracket_type: str) -> dict:
     ff    = [pick_winner(e8[i],  e8[i+1])  for i in range(0, len(e8)-1,  2)]
     champ = pick_winner(ff[0], ff[1]) if len(ff) >= 2 else (ff[0] if ff else "Duke")
 
-    # Identify top upsets (where lower seed wins)
     upsets = []
     for t1, t2 in r64:
         s1 = seeds.get(t1, 8)
@@ -339,31 +333,23 @@ async def predict_full_bracket(bracket_type: str) -> dict:
                 "confidence": int(_seed_win_prob(winner_seed, loser_seed) * 100)
             })
 
-    # Build round matchup strings for display
-    r32_matchups = [(r32[i], r32[i+1]) for i in range(0, len(r32)-1, 2)]
-    s16_matchups = [(s16[i], s16[i+1]) for i in range(0, len(s16)-1, 2)]
-    e8_matchups  = [(e8[i],  e8[i+1])  for i in range(0, len(e8)-1,  2)]
-
     if bracket_type == "mens":
-        analysis = f"Duke enters as the clear favorite with elite guard play. Houston and Michigan are the strongest challengers from their respective regions."
-        dark_horse = "St John's"
-        top_upset = "Northern Iowa over St Johns - St Johns struggled late in the season"
+        analysis   = "Duke enters as the clear favorite with elite guard play. Houston and Michigan are the strongest challengers."
+        dark_horse = "St Johns"
+        top_upset  = "Northern Iowa over St Johns - St Johns struggled late in the season"
     else:
-        analysis = f"South Carolina is the overwhelming favorite led by Dawn Staley. UConn and UCLA are the strongest challengers with elite guard play."
+        analysis   = "South Carolina is the overwhelming favorite led by Dawn Staley. UConn and UCLA are the strongest challengers."
         dark_horse = "Notre Dame"
-        top_upset = "Murray St over Maryland - Murray St has elite guard play and a hot streak"
+        top_upset  = "Murray St over Maryland - Murray St has elite guard play and a hot streak"
 
     return {
-        "champion":    champ,
-        "finalFour":   ff,
-        "eliteEight":  e8,
+        "champion":     champ,
+        "finalFour":    ff,
+        "eliteEight":   e8,
         "sweetSixteen": s16,
-        "roundOf32":   r32,
-        "r32Matchups": r32_matchups,
-        "s16Matchups": s16_matchups,
-        "e8Matchups":  e8_matchups,
-        "upsets":      upsets[:5],
-        "analysis":    analysis,
-        "darkHorse":   dark_horse,
+        "roundOf32":    r32,
+        "upsets":       upsets[:5],
+        "analysis":     analysis,
+        "darkHorse":    dark_horse,
         "topUpsetPick": top_upset,
     }
