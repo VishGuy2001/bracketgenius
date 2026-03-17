@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../hooks/useAuthStore'
 import { getUserBrackets } from '../lib/supabase'
 import { Trophy, Brain, Plus, Clock, ChevronRight, TrendingUp, Activity, Users } from 'lucide-react'
+import { apiFetch } from '../lib/api'
 
 
 export default function DashboardPage() {
@@ -159,7 +160,7 @@ function AIPredictions({ type }) {
   const { data, isLoading } = useQuery({
     queryKey: ['predictions', type],
     queryFn: async () => {
-      const res = await fetch(`/api/bracket/${type}/predict`, {
+      const res = await apiFetch(`/api/bracket/${type}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})

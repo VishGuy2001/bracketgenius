@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../hooks/useAuthStore'
 import { Brain, Send, RefreshCw, Sparkles, User } from 'lucide-react'
+import { apiFetch } from '../lib/api'
 
 const SUGGESTED_PROMPTS = [
   "Who are the biggest upset risks in the Men's tournament?",
@@ -44,7 +45,7 @@ export default function AgentPage() {
     setIsThinking(true)
 
     try {
-      const res = await fetch('/api/agent/chat', {
+      const res = await apiFetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

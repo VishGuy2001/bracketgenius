@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useBracketStore } from '../hooks/useAuthStore'
 import { Brain, ChevronDown, ChevronUp, AlertCircle, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { apiFetch } from '../lib/api'
 
 export default function ReasoningPanel({ matchup, type, reasoningMode }) {
   const { customWeights } = useBracketStore()
@@ -10,7 +11,7 @@ export default function ReasoningPanel({ matchup, type, reasoningMode }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ['analysis', matchup?.id, type, reasoningMode, JSON.stringify(customWeights)],
-    queryFn: () => fetch('/api/analyze/matchup', {
+    queryFn: () => apiFetch('/api/analyze/matchup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ matchup, type, reasoningMode, customWeights })
